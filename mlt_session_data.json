@@ -1,0 +1,27 @@
+{
+  "saved_at": "2026-04-16T14:42:59.414214",
+  "applicants": [
+    {
+      "id": "manual-144246",
+      "name": "Student",
+      "gpa": 3.5,
+      "sat": 0,
+      "pell": 0,
+      "low_income": false,
+      "first_gen": false,
+      "gender": "Female",
+      "race": "Black or African American",
+      "func_interest": "Consulting (Management Consulting / Strategy)",
+      "program": "",
+      "company": "",
+      "job_title": "",
+      "job_type": "Internship (Undergrad)",
+      "partner_org": 1,
+      "app_status": "Applied",
+      "coach": "",
+      "notes": "",
+      "score": 45.2,
+      "added_at": "2026-04-16T14:42:46.266827"
+    }
+  ]
+}
