@@ -331,17 +331,72 @@ def score_application(student: dict) -> float:
         return round(lasso_model.predict_proba(X)[0][1] * 100, 1)
     except: return 0.0
 
+FORTUNE_500 = {
+    "Amazon", "Target", "Google", "Visa Inc.", "Dell Technologies Inc.",
+    "Citi", "AT&T", "Morgan Stanley", "JPMorgan Chase", "Goldman Sachs",
+    "Bank of America", "Wells Fargo", "Microsoft", "Apple", "Meta",
+    "Meta Platforms", "IBM", "Intel", "Oracle", "Cisco",
+    "Johnson & Johnson", "Procter & Gamble", "PepsiCo", "Coca-Cola",
+    "Nike", "Walt Disney", "Netflix", "Salesforce", "Adobe", "PayPal",
+    "American Express", "Capital One", "T-Mobile", "Verizon",
+    "Home Depot", "Walmart", "Costco", "General Electric",
+    "Honeywell", "Lockheed Martin", "Boeing", "General Motors", "Ford",
+    "ExxonMobil", "Chevron", "Pfizer", "Merck", "Eli Lilly",
+    "Accenture", "Uber", "Mastercard", "Starbucks Coffee Company",
+    "LinkedIn", "Deloitte", "BlackRock", "Charles Schwab",
+    "Kearney", "Boston Consulting", "McKinsey", "Bain",
+    "FICO", "Chick-Fil-A",
+}
+
+def infer_seniority(title: str) -> str:
+    t = title.lower()
+    if any(x in t for x in ['mba', 'graduate', 'grad']): return 'MBA / Graduate'
+    if any(x in t for x in ['senior', 'sr.', 'lead', 'principal']): return 'Senior'
+    if any(x in t for x in ['manager', 'director', 'vp', 'vice president']): return 'Manager/Director'
+    if any(x in t for x in ['intern', 'internship', 'summer']): return 'Undergraduate'
+    return 'Undergraduate'
+
+def infer_position_type(title: str) -> str:
+    t = title.lower()
+    if any(x in t for x in ['analyst', 'analysis']): return 'Analyst'
+    if any(x in t for x in ['engineer', 'developer', 'software']): return 'Engineer'
+    if any(x in t for x in ['manager', 'management']): return 'Manager'
+    if any(x in t for x in ['consult']): return 'Consultant'
+    if any(x in t for x in ['intern', 'internship']): return 'Intern'
+    return 'Intern'
+
 def app_to_features(app: dict) -> dict:
+    title     = str(app.get('job_title', ''))
+    company   = str(app.get('company', ''))
+    job_type  = str(app.get('job_type', ''))
+    industry  = str(app.get('industry', ''))
+
+    is_summer    = 1 if any(x in title.lower() for x in ['summer', 'intern']) else 0
+    is_fortune   = 1 if company.strip() in FORTUNE_500 else 0
+    title_words  = len(title.split()) if title else 1
+    seniority    = infer_seniority(title)
+    position     = infer_position_type(title)
+
+    # Company size — default mid if unknown
+    company_size = app.get('company_size', 'Mid (1K-10K)')
+
+    # Industry subsector from stored field or default
+    ind_subsector = industry if industry and industry not in ['', 'nan', 'None'] else 'Other'
+
     return {
-        'Undergrad GPA':               app.get('gpa', medians.get('Undergrad GPA', 3.5)),
-        'SAT Score':                   app.get('sat', 0),
-        'Pell Grant Count':            app.get('pell', 0),
+        'Primary Functional Interest': app.get('func_interest', ''),
         'Designated Low Income':       int(app.get('low_income', False)),
         'First Generation College':    'Yes' if app.get('first_gen') else 'No',
-        'Gender':                      app.get('gender', ''),
-        'Race':                        app.get('race', ''),
-        'Primary Functional Interest': app.get('func_interest', ''),
-        'Partner Org?':                'Partner - Active' if app.get('partner_org') else 'Non-Partner',
+        'Undergrad GPA':               app.get('gpa') or medians.get('Undergrad GPA', 3.5),
+        'Pell Grant Count':            app.get('pell', 0),
+        'SAT Score':                   app.get('sat', 0),
+        'Summer_Internship':           is_summer,
+        'Position_Type':               position,
+        'Seniority_Level':             seniority,
+        'Title_Word_Count':            title_words,
+        'Industry_Subsector':          ind_subsector,
+        'Company_Size_Bucket':         company_size,
+        'Is_Fortune500':               is_fortune,
     }
 
 def excel_row_to_applicant(row: pd.Series) -> dict:
@@ -368,6 +423,7 @@ def excel_row_to_applicant(row: pd.Series) -> dict:
         "coach":        str(row.get('Program Enrollment: Coach', '')),
         "track":        str(row.get('Program Enrollment: Program Track', '')),
         "industry":     str(row.get('Primary Industry Interest', '')),
+        "company_size": "Mid (1K-10K)",
         "notes":        "",
         "score":        None,
         "actual_offer": 1 if status in POSITIVE_STATUSES else (0 if status in NEGATIVE_STATUSES else None),
@@ -430,7 +486,7 @@ with st.sidebar:
             "func_interest": s_func, "track": s_track,
             "program": "", "company": s_company, "job_title": s_title,
             "job_type": "Internship (Undergrad)", "partner_org": int(s_partner),
-            "app_status": s_app_status, "coach": "", "industry": "",
+            "app_status": s_app_status, "coach": "", "industry": s_func, "company_size": "Mid (1K-10K)",
             "notes": "", "score": None, "actual_offer": None,
             "added_at": datetime.now().isoformat(),
         }
